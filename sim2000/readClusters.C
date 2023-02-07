@@ -270,17 +270,25 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
 
   for (int i = 0; i < 7; i++) {
 
+
+    // ========== MIP Charge Clusters [1D hist 200...2200]=========================
+    // canvas = canvas[0
     const char *canStringMip =
         Form("MIP-Charge %i; Charge (ADC channel); Entries/40 ADC", i);
     hMipCharge[i].reset(new TH1F(canStringMip, canStringMip, 50, 200., 2200.));
     hMipCharge[i]->SetStats(kTRUE);
 
+
+    // ========== Digit Charge [1D Histogram 0..2200], Logaritmic x and y-axes=========================
+    // canvas[1]
     const char *canStringSize = Form(
         "Logaritmic Digit Charge %i; Charge (ADC channel); Entries/40 ADC", i);
     digCharge[i].reset(new TH1F(canStringSize, canStringSize, 50, 0., 400.));
     digCharge[i]->SetLabelOffset(0.0065, "y");
     digCharge[i]->SetTitleSize(digCharge[i]->GetTitleSize("x") * 1.2, "xy");
 
+    // ========== Digit Charge Small Range [1D Histogram 0..10]=========================
+    // canvas = digSmallCanv
     const char *canStringSizes =
         Form("Digit Charge %i;Charge (ADC channel);Entries/40 ADC", i);
     digChargeSmall[i].reset(new TH1F(canStringSizes, canStringSizes, 10, 0., 10.));
@@ -288,39 +296,50 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     digChargeSmall[i]->SetTitleSize(digChargeSmall[i]->GetTitleSize("x") * 1.2, "xyz");
     digChargeSmall[i]->SetLabelSize(digChargeSmall[i]->GetLabelSize("x") * 1.2, "xyz");
 
+
+    // ========== Digit MAP of Total Digit Charge [2D Hist 144x160]=========================
+    // canvas[2]
     const char *canDigMap = Form("Digit Map %i;x [cm];y [cm]", i);
     digMap[i].reset(new TH2F(canDigMap, canDigMap, 160, 0, 159, 144, 0, 143));
     digMap[i]->SetTitleSize(digMap[i]->GetTitleSize("x") * 1.3, "xyz");
-
+     
+    // ========== Digit Map of Charge Below 4 [2D Hist 160x144]=========================
+    // canvas digMapLowCan
     const char *mapCharge4Str =
         Form("Chamber %i Digits with Charge < 4 ;x [cm];y [cm]", i);
     mapCharge4[i].reset(
         new TH2F(mapCharge4Str, mapCharge4Str, 160, 0, 159, 144, 0, 143));
     mapCharge4[i]->SetTitleSize(mapCharge4[i]->GetTitleSize("x") * 1.2, "xy");
 
+
+    // ========== Map of Digits with Charge 0  [2D Hist 160x144] =========================
+    // canvas digMap0
     const char *can0Charge = Form("Number of Zero Charge %i; x [cm];y [cm]", i);
     dig0Charge[i].reset(
         new TH2F(can0Charge, can0Charge, 160, 0, 159, 144, 0, 143));
-    // digMap[i].reset(new TH2F(canDigMap, canDigMap, 160*0.8, 0, 159*0.8,
-    // 144*0.8, 0, 160*0.8));
     dig0Charge[i]->SetTitleSize(dig0Charge[i]->GetTitleSize("x") * 1.3, "xy");
 
+
+    // ========== Map of Selected Pads by User to Evaluate [2D Hist 160x144]=========================
+    // canvas digMapSelCanv
     const char *canDigSel = Form("Selected Pads %i; x [cm];y [cm]", i);
     digMapSel[i].reset(
         new TH2F(canDigSel, canDigSel, 160, 0, 159, 144, 0, 143));
-    // digMap[i].reset(new TH2F(canDigMap, canDigMap, 160*0.8, 0, 159*0.8,
-    // 144*0.8, 0, 160*0.8));
     digMapSel[i]->SetTitleSize(digMapSel[i]->GetTitleSize("x") * 1.3, "xy");
 
+
+    // ========== Digit MAP of Average Digit Charge Normalized to Number of Events [2D Hist 144x160]=========================
+    // canvas canvas[3]
     const char *canDigAvg = Form("Average Charge (Normalized to Total Number "
                                  "of Events) %i;  x [cm];y [cm]",
                                  i);
     digMapAvg[i].reset(
         new TH2F(canDigAvg, canDigAvg, 160, 0, 159, 144, 0, 143));
-    // digMap[i].reset(new TH2F(canDigMap, canDigMap, 160*0.8, 0, 159*0.8,
-    // 144*0.8, 0, 160*0.8));
     digMapAvg[i]->SetTitleSize(digMapAvg[i]->GetTitleSize("x") * 1.3, "xy");
 
+
+    // ========== Digit Occupancy per Chamber [1D histogram 0.. 0.5%] y [number of Digit-Entries] is logaritmic=========================
+    // canvas[4]
     const char *digEvtFreqStr =
         Form("Chamber %i Occupancy ;Occupancy [%];Number of Entries", i);
     digPerEvent[i].reset(new TH1F(digEvtFreqStr, digEvtFreqStr, 500, 0., .5));
@@ -328,15 +347,19 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
                                  "xyz");
     digPerEvent[i]->SetLabelSize(digPerEvent[i]->GetLabelSize("x") * 1.2, "xy");
 
+
+    // ================= Average Digit Charge Map by number of Entries per Channel ( [2D histogram 144x160]) ===================
+    // canvas digMapEntyAvg
     const char *canEntAvg =
         Form("Average Charge Entry Per Channel %i;  x [cm];y [cm]", i);
     digMapEntyAvg[i].reset(
         new TH2F(canEntAvg, canEntAvg, 160, 0, 159, 144, 0, 143));
-    // digMap[i].reset(new TH2F(canDigMap, canDigMap, 160*0.8, 0, 159*0.8,
-    // 144*0.8, 0, 160*0.8));
     digMapEntyAvg[i]->SetTitleSize(digMapEntyAvg[i]->GetTitleSize("x") * 1.3,
                                    "xyz");
 
+
+    // ================= Nonzero Digit Entries ( [2D histogram 144x160 mapEntCount]) ===================
+    // canvas canvDigitCnt
     const char *canEntCnt =
         Form("Digit-Entires Per Channel %i;  x [cm];y [cm]", i);
     mapEntCount[i].reset(
@@ -512,8 +535,6 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     for (int j = firstTrig; j < lastTrig; j++) {
       const auto &dig = digits[j];
       Digit::pad2Absolute(dig.getPadID(), &module, &padChX, &padChY);
-      // cout << "Fill Chamber, trNum " <<  module << " " << trigNum << endl;
-      // cout << "Total " << cntCh[module] << endl;
       cntCh[module]++;
       avgDig[module]++;
     }
@@ -575,18 +596,13 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     const auto &x = clus.x();
     const auto &y = clus.y();
     const auto &module = clus.ch();
-
+    
+    /*
     if (charge == 0) {
       cout << " chargeCluster == 0 | Chamber " << module << endl;
       // digMapSel[module]->Fill(padChX, padChY, 1.);
-    }
-
-    if (minCharge < charge) {
-      minCharge = charge;
-    }
-    if (minCharge < charge) {
-      minCharge = charge;
-    }
+    } */
+     
 
     if (clusSize >= 3 && clusSize <= 7) {
       hMipCharge[module]->Fill(charge);
@@ -610,6 +626,8 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   // const char* runLabel = Form("%i  Duration = %s", fname, f1);
   const char *runLabel = Form("%s", folder);
 
+
+  // To add textboxes
   vector<const char *> tpvTexts{"MIP Clusters Charge",
                                 "Digits-Charge, logx logy",
                                 "Digits-Map",
@@ -659,31 +677,40 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     tpvs[i]->Draw();
   }
 
-  static constexpr int posArr[] = {9, 8, 6, 5, 4, 2, 1};
-  changeFont();
 
+  // location of Pads in Canvas to follow HMPID-modules
+  static constexpr int posArr[] = {9, 8, 6, 5, 4, 2, 1};
+
+
+
+  /// change default font
+  changeFont();
   gStyle->SetStatX(0.95);
   gStyle->SetStatY(0.925);
   gStyle->SetStatW(0.3);
   gStyle->SetStatH(0.3);
 
-  std::unique_ptr<TCanvas> tempX, tempY;
-  tempX.reset(new TCanvas(Form("Event Channel Average %s", folder),
+
+
+  // ================= Average Digit Charge Map by number of Entries per Channel (canvDigitAvgEvt [2D histogram 144x160]) ===================
+  std::unique_ptr<TCanvas> canvDigitAvgEvt, canvDigitCnt;
+  canvDigitAvgEvt.reset(new TCanvas(Form("Event Channel Average %s", folder),
                           Form("Event Channel Average %s", folder), 1200, 2000));
-  tempX->Divide(3, 3);
-  tempX->cd(3);
+  canvDigitAvgEvt->Divide(3, 3);
+  canvDigitAvgEvt->cd(3);
   tpvs2[4]->Draw();
 
-  tempY.reset(new TCanvas(Form("Event Channel Count %s", folder),
+  // ================= Nonzero Digit Entries (canvDigitCnt [2D histogram 144x160 mapEntCount]) ===================
+  canvDigitCnt.reset(new TCanvas(Form("Event Channel Count %s", folder),
                           Form("Event Channel Count %s", folder), 1200, 2000));
-  tempY->Divide(3, 3);
-  tempY->cd(3);
+  canvDigitCnt->Divide(3, 3);
+  canvDigitCnt->cd(3);
   tpvs2[5]->Draw();
 
   int maxCnt[7] = {0};
   for (int iCh = 0; iCh < 7; iCh++) {
     const auto &pos = posArr[iCh];
-    TPad *pad = static_cast<TPad *>(tempX->cd(pos));
+    TPad *pad = static_cast<TPad *>(canvDigitAvgEvt->cd(pos));
     for (int x = 0; x < 160; x++) {
       for (int y = 0; y < 144; y++) {
         if (chargeAvgCount[iCh][x][y] > maxCnt[iCh]) {
@@ -693,9 +720,6 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
             chargeAvgByEntries[iCh][x][y] / chargeAvgCount[iCh][x][y];
         if (chargeAvgCount[iCh][x][y] != 0) {
           digMapEntyAvg[iCh]->Fill(x, y, chAverage);
-          // if(chAverage != 0) {
-          // digMapEntyAvg[iCh]->Fill(x, y, chAverage);
-          // digMapEntyAvg[iCh]->Divide(mapEntCount[iCh][x][y]);
         } else {
           digMapEntyAvg[iCh]->Fill(x, y, 0.);
         }
@@ -710,7 +734,7 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     digMapEntyAvg[iCh]->SetStats(kFALSE);
     digMapEntyAvg[iCh]->Draw("Colz");
 
-    TPad *pad2 = static_cast<TPad *>(tempY->cd(pos));
+    TPad *pad2 = static_cast<TPad *>(canvDigitCnt->cd(pos));
     pad2->SetLogz(1);
     pad2->SetLeftMargin(pad->GetLeftMargin());
     pad2->SetBottomMargin(pad->GetBottomMargin());
@@ -718,9 +742,12 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     mapEntCount[iCh]->SetStats(kFALSE);
     mapEntCount[iCh]->Draw("Colz");
   }
-  tempX->SaveAs(Form("AverageByEntries_%s_.png", folder));
-  tempY->SaveAs(Form("CountEntries_%s_.png", folder));
+  canvDigitAvgEvt->SaveAs(Form("AverageByEntries_%s_.png", folder));
+  canvDigitCnt->SaveAs(Form("CountEntries_%s_.png", folder));
 
+
+ 
+  // ================= Event Time information ===================
   std::unique_ptr<TCanvas> temp1;
   temp1.reset(new TCanvas(Form("Event Information %s", folder),
                           Form("Event Information %s", folder), 1200, 2000));
@@ -866,8 +893,6 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
                                   "xyz");
     hMipCharge[iCh]->SetLabelOffset(
         hMipCharge[iCh]->GetLabelOffset("y") * 1.2 * 1.1, "xyz");
-    // hMipCharge[iCh]->SetTitle(Form("Constant %03.1f \n MPV %03.1f Sigma
-    // %03.1f", Constant, MPV, Sigma));
     hMipCharge[iCh]->Draw();
   }
 
