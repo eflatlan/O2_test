@@ -3,8 +3,6 @@
 
 
 #include "HMPIDTools.h"
-#include "HMPIDTools.h"
-
 #include "DataFormatsHMP/Cluster.h"
 #include "DataFormatsHMP/Digit.h"
 #include "DataFormatsHMP/Trigger.h"
@@ -50,7 +48,16 @@
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
+#include "randutils.hpp"
+#include <random>
 #endif
+
+
+
+
+int range;    // = numTriggers - 1;
+int numEvent; // = rng.(0, range)
+
 
 using o2::hmpid::Cluster, o2::hmpid::Digit, o2::hmpid::Trigger,
     o2::hmpid::Clusterer;
@@ -58,6 +65,12 @@ using std::vector, std::cout, std::cin, std::endl;
 using std::this_thread::sleep_for;
 
 using o2::InteractionRecord;
+
+
+// 
+vector<Digit> oneEventDigits; vector<Cluster> oneEventClusters;
+//pair<vector<Digit>, > oneEventCluMapsters
+vector<vector<Digit>> nestedVectorDig; vector<vector<Cluster>> nestedVectorClu;
 
 std::vector<o2::hmpid::Digit> mDigitsFromFile,
     *mDigitsFromFilePtr = &mDigitsFromFile;
@@ -103,7 +116,7 @@ void initFileIn(const std::string &fileName);
 
 void strToFloatsSplit(std::string s, std::string delimiter, float *res,
                       int maxElem = 7);
-
+/*
 struct TriggerTimeInf {
   double timeInNs;
   int triggerIndex;
@@ -112,7 +125,7 @@ struct TriggerTimeInf {
       : timeInNs(_timeInNs), triggerIndex(_triggerIndex) {}
 };
 
-vector<TriggerTimeInf> triggerInfoVec;
+vector<TriggerTimeInf> triggerInfoVec;*/
 
 #include <filesystem>
 #include <iostream>
@@ -125,10 +138,9 @@ double chargeAvgByEntries[7][160][144] = {
 int chargeAvgCount[7][160][144] = {{{0}}};
 
 //o2::hmpidTools::HMPIDTools hmpidTools;
-ClassImp(HMPIDTools);
+/*ClassImp(HMPIDTools);
 class HMPIDTools;
-
-std::unique_ptr<HMPIDTools> hmpidTools = std::make_unique<HMPIDTools>();
+std::unique_ptr<HMPIDTools> hmpidTools = std::make_unique<HMPIDTools>();*/
 
 
 //void setPadChannel(bool (&padDigOff)[7][160][144], int chamber, int xLow,
@@ -139,14 +151,14 @@ void fillDigMap(vector<Digit> &digits);
 
 void readClusters(int nEvents = 1, bool leadRun = false) {
 
-  for(int iCh = 0; iCh < 7; iCh++){
+  /*for(int iCh = 0; iCh < 7; iCh++){
     for(int iSec = 0; iSec < 7; iSec++){
       hmpidTools->setSectorStatus(iCh, iSec, true);
     }
   }
  
   hmpidTools->setSectorListStatus({{0, 2}, {0, 3}, {1, 1}, {2, 4}, {4, 0}, {5, 1}, {5, 4}}, false);
-  hmpidTools->setLinkListStatus({{1,0},{5,1}}, false);
+  hmpidTools->setLinkListStatus({{1,0},{5,1}}, false);*/
 
   if (leadRun) {
     trigSort2->SetBins(50, 0, 2000.);
@@ -165,7 +177,7 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   std::array<std::unique_ptr<TH1F>, 7> digCharge, hMipCharge, digPerEvent,
       digChargeSmall;
   std::array<std::unique_ptr<TH2F>, 7> digMap, digMapAvg, digMapSel, test,
-      mapCharge4, digMapEntyAvg, mapEntCount, dig0Charge;
+      mapCharge4, digMapEntyAvg, mapEntCount, dig0Charge, oneEventDigMap, oneEventCluMap;
 
   std::array<std::unique_ptr<TH1F>, 3> triggerTimeFreqHist;
   TH1F trigSortHist;
@@ -185,7 +197,7 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   
 
   // Testing..
-  hmpidTools->setPadChannel(6, 141, 150, 105, 110, false); // chamber, xLow, xHigh, yLow,  yHigh
+  //hmpidTools->setPadChannel(6, 141, 150, 105, 110, false); // chamber, xLow, xHigh, yLow,  yHigh
 
   vector<Cluster> clusters;
   vector<Trigger> clusterTriggers;
@@ -193,6 +205,9 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   string fname = "";
   vector<string> fileInfo;
   int numTriggers;
+
+  
+
 
   bool fileFound = false;
   for (const auto &entry : fs::directory_iterator(path)) {
@@ -242,6 +257,10 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
 
         std::cout << " folderName " << folderName << std::endl;
         fileFound = true;
+
+
+
+        initFileIn(fileName);
         fileInfo = dig2Clus(pathName, clusters, clusterTriggers, digits);
 
         // can not sort if only 1 trigger
@@ -265,6 +284,11 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     return;
     std::exit(0);
   }
+
+  //nestedVectorDig.resize(numTriggers, vector<Digits>);
+  //nestedVectorClu.resize(numTriggers, vector<Cluster>);
+
+
 
   float avgDigits = static_cast<float>(1.0f * digits.size() / numTriggers);
 
@@ -320,6 +344,18 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
     dig0Charge[i]->SetTitleSize(dig0Charge[i]->GetTitleSize("x") * 1.3, "xy");
 
 
+    // ========== Map of One Event Digit Hits  [2D Hist 160x144] =========================
+    const char *canoneEventDigMap = Form("One Event Digits %i; x [cm];y [cm]", i);
+    oneEventDigMap[i].reset(
+        new TH2F(canoneEventDigMap, canoneEventDigMap, 160, 0, 159, 144, 0, 143));
+    oneEventDigMap[i]->SetTitleSize(oneEventDigMap[i]->GetTitleSize("x") * 1.3, "xy");
+
+    // ========== Map of One Event Cluster Hits  [2D Hist 160x144] =========================
+    const char *canOneEventClu = Form("One Event Clusters %i; x [cm];y [cm]", i);
+    oneEventCluMap[i].reset(
+        new TH2F(canOneEventClu, canOneEventClu, 160, 0, 159, 144, 0, 143));
+    oneEventCluMap[i]->SetTitleSize(oneEventCluMap[i]->GetTitleSize("x") * 1.3, "xy");
+    
     // ========== Map of Selected Pads by User to Evaluate [2D Hist 160x144]=========================
     // canvas digMapSelCanv
     const char *canDigSel = Form("Selected Pads %i; x [cm];y [cm]", i);
@@ -468,7 +504,6 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
 
   Int_t nTotTriggers = 0;
 
-  vector<Digit> oneEventDigits;
   std::unique_ptr<Trigger> pTgr;
   std::unique_ptr<Cluster> pClu, pCluEvt, cluster;
   const int digSize = digits.size();
@@ -484,7 +519,7 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   const auto rel = 100.0 / (144 * 160);
 
   for (const auto &trig : mTriggersFromFile) {
-    oneEventDigits.clear();
+
     const int numDigPerTrig = trig.getNumberOfObjects();
     const int firstTrig = trig.getFirstEntry();
     const int lastTrig = trig.getLastEntry();
@@ -502,32 +537,6 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
       triggerTimeFreqHist[0]->Fill(tDif);
       trigTime->SetPoint(trigNum - 1, static_cast<double>(time), tDif);
       trigSort->Fill(time);
-    }
-
-    if (tDif > pow(10, 8)) {
-      cout << " Exceeded limit Trigger Number " << trigNum << " Tdiff " << tDif
-           << endl;
-      cout << "Count " << trigTimeCount3 << endl;
-      trigTimeCount3++;
-    }
-
-    if (tDif > pow(10, 7)) {
-      cout << " Exceeded limit Trigger Number " << trigNum << " Tdiff " << tDif
-           << endl;
-      cout << "Count " << trigTimeCount2 << endl;
-      trigTimeCount2++;
-    }
-
-    if (tDif > pow(10, 6)) {
-      cout << " Exceeded limit Trigger Number " << trigNum << " Tdiff " << tDif
-           << endl;
-      cout << "Count " << trigTimeCount << endl;
-      trigTimeCount++;
-    }
-
-    if (time < pow(10, 6)) {
-      cout << "Time " << time << " Trigger Number " << trigNum << " Tdiff "
-           << tDif << endl;
     }
 
     std::array<int, 7> cntCh = {0, 0, 0, 0, 0, 0, 0};
@@ -690,6 +699,56 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   gStyle->SetStatW(0.3);
   gStyle->SetStatH(0.3);
 
+
+    // ========== Map of One Event Digit Hits  [2D Hist 160x144] =========================
+
+
+  const char* oneEvDigStr = Form("One Event Digit%s", folder);
+  auto oneEventDigitCanvas = std::make_unique<TCanvas>(oneEvDigStr, oneEvDigStr, 1200, 1200);
+  oneEventDigitCanvas->Divide(3, 3);
+
+  for(const auto& dig : oneEventDigits){
+    const auto& digId = dig.getPadID();
+    //cout << "filling digits " << digId << endl;
+    Digit::pad2Absolute(digId, &module, &padChX, &padChY);
+    oneEventDigMap[module]->Fill(padChX, padChY, dig.getQ());
+  } 
+
+  for (int iCh = 0; iCh < 7; iCh++) {
+    const auto &pos = posArr[iCh];
+    TPad *pad = static_cast<TPad *>(oneEventDigitCanvas->cd(pos));
+    oneEventDigMap[iCh]->SetStats(kFALSE);
+    oneEventDigMap[iCh]->SetMarkerStyle(3);
+    oneEventDigMap[iCh]->Draw("Colz");
+  }
+  oneEventDigitCanvas->SaveAs(Form("One Event Digit Map_%s_.png", folder));
+  oneEventDigitCanvas->Show();
+
+
+    // ========== Map of One Event Cluster Hits  [2D Hist 160x144] =========================
+
+  const char* oneEvCluStr = Form("One Event Cluster%s", folder);
+  auto oneEventClusterCanvas = std::make_unique<TCanvas>(oneEvCluStr, oneEvCluStr, 1200, 1200);
+  oneEventClusterCanvas->Divide(3, 3);
+
+  for(auto& clu : oneEventClusters){
+    auto chamber = clu.ch();
+    //cout << "filling clusters " << chamber << endl;
+    auto x = clu.x();
+    auto y = clu.y();
+    auto charge = clu.q();
+    oneEventCluMap[chamber]->Fill(padChX, padChY, charge);
+  }
+
+  for (int iCh = 0; iCh < 7; iCh++) {
+    const auto &pos = posArr[iCh];
+    TPad *pad = static_cast<TPad *>(oneEventClusterCanvas->cd(pos));
+    oneEventCluMap[iCh]->SetStats(kFALSE);
+    oneEventCluMap[iCh]->SetMarkerStyle(3);
+    oneEventCluMap[iCh]->DrawCopy("Colz");//    oneEventCluMap[iCh]->DrawCopy("Colz");
+  }
+  oneEventClusterCanvas->SaveAs(Form("One Event Cluster Map_%s_.png", folder));
+  oneEventClusterCanvas->Show();
 
 
   // ================= Average Digit Charge Map by number of Entries per Channel (canvDigitAvgEvt [2D histogram 144x160]) ===================
@@ -1088,8 +1147,26 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
   canvas[4]->Show();
 
 
-  hmpidTools->drawSectorStatus();
+  //hmpidTools->drawSectorStatus();
   sleep_for(5000ms);
+  // to edit TCanvases::
+  bool userInput = false;
+  while(!userInput){
+    sleep_for(5000ms);   
+    string uInputString;
+    sleep_for(50ms);
+    cin >> uInputString;
+    if(uInputString == "C"){
+      sleep_for(10000ms);
+
+      while(uInputString != "Q"){
+        cin >> uInputString;
+        sleep_for(10000ms);
+      }
+    }
+    sleep_for(1000ms);
+  }
+
 }
 
 vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
@@ -1100,9 +1177,8 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
 
   mRec.reset(new o2::hmpid::Clusterer()); // ef: changed to smart-pointer
 
-  initFileIn(fileName);
-
-  std::cout << "[HMPID DClusterization - run() ] Enter ...";
+  
+  std::cout << "[HMPID DClusterization - run() ] Enter ..." << endl;
 
   clusters.clear();
   clusterTriggers.clear();
@@ -1111,12 +1187,23 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
   double durMin, durSec = 0.0;
   if (mTree->GetReadEntry() + 1 >= mTree->GetEntries()) {
   } else {
+    
     auto entry = mTree->GetReadEntry() + 1;
     assert(entry < mTree->GetEntries());
     mTree->GetEntry(entry);
 
+    const int numberOfTrigger = mTriggersFromFilePtr->size();
+    cout << "numberOfTrigger " << numberOfTrigger << endl;
+    std::random_device rd;
+    std::uniform_real_distribution<> range(0, numberOfTrigger - 1);
+    std::mt19937 mt(rd());
+    numEvent = static_cast<int>(range(mt));
+    cout << "numEvent " << numEvent << endl;
+
+    int j = 0;
     for (const auto &trig : *mTriggersFromFilePtr) {
       if (trig.getNumberOfObjects()) {
+
         gsl::span<const Digit> trigDigits{mDigitsFromFilePtr->data() +
                                               trig.getFirstEntry(),
                                           size_t(trig.getNumberOfObjects())};
@@ -1124,12 +1211,33 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
         mRec->Dig2Clu(trigDigits, clusters, mSigmaCut, true); // ef:uncomment
         clusterTriggers.emplace_back(trig.getIr(), clStart,
                                      clusters.size() - clStart);
-      }
-    }
+        if(j == numEvent){
+          /*for(auto clu : clusters) {
+            auto chamber = clu.ch();
+    	    cout << "filling clusters " << chamber << endl;
+    	    auto x = clu.x();
+    	    auto y = clu.y();
+    	    auto charge = clu.q();
+    	    oneEventCluMap[chamber]->Fill(padChX, padChY, charge);
+          }*/
+          oneEventClusters = clusters;
+          for(const auto& dig : trigDigits){
+ 	   oneEventDigits.push_back(dig);
+           /*const auto& digId = dig.getPadID();
+    	   cout << "filling digits " << digId << endl;
+    	   Digit::pad2Absolute(digId, &module, &padChX, &padChY);
+    	   oneEventDigMap[module]->Fill(padChX, padChY, dig.getQ());*/
+	  }
+        }
+      } // end if trig.getNumberOfObjects()
+      j++;
 
-    cout << " Received " << mTriggersFromFilePtr->size() << " triggers with "
+    }   // end for
+
+
+    LOG(info) << " Received " << mTriggersFromFilePtr->size() << " triggers with "
          << mDigitsFromFilePtr->size()
-         << " digits -> clusters = " << clusters.size() << endl;
+         << " digits -> " << clusters.size() << " clusters with triggers = " <<clusterTriggers.size() << endl;
 
     digits = *mDigitsFromFilePtr;
     if (digits.size() == 0) {
@@ -1138,7 +1246,7 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
     mDigitsReceived = mDigitsFromFilePtr->size();
     mClustersReceived = clusters.size();
     mTriggersReceived = mTriggersFromFilePtr->size();
-  }
+  } // end if/else
 
 
   const int numTriggers = static_cast<int>(mTriggersReceived);
@@ -1216,7 +1324,7 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
     const auto &bc = trig.getBc();
     const auto timeTrigger = InteractionRecord::bc2ns(bc, orbit);
 
-    triggerInfoVec.emplace_back(timeTrigger, trigNum);
+    //triggerInfoVec.emplace_back(timeTrigger, trigNum);
     trigPrev = trig;
     if (trigNum > 0) {
       tDelta = InteractionRecord::bc2ns(bc, orbit) -
@@ -1322,7 +1430,7 @@ void sortTimes(vector<double> &timeOfEvents,
   avgTimeF = avgTimeF / timeLimit;
 
   for (const auto &f : lastTimes) {
-    cout << "time : " << f << endl;
+    //cout << "time : " << f << endl;
     avgTimeF += f;
   }
   avgTimeL = avgTimeL / nEvents;
