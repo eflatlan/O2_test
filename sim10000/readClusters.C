@@ -733,19 +733,19 @@ void readClusters(int nEvents = 1, bool leadRun = false) {
 
   for(auto& clu : oneEventClusters){
     auto chamber = clu.ch();
-    //cout << "filling clusters " << chamber << endl;
     auto x = clu.x();
     auto y = clu.y();
     auto charge = clu.q();
-    oneEventCluMap[chamber]->Fill(padChX, padChY, charge);
+    oneEventCluMap[chamber]->Fill(x, y, charge);
   }
+
 
   for (int iCh = 0; iCh < 7; iCh++) {
     const auto &pos = posArr[iCh];
     TPad *pad = static_cast<TPad *>(oneEventClusterCanvas->cd(pos));
     oneEventCluMap[iCh]->SetStats(kFALSE);
     oneEventCluMap[iCh]->SetMarkerStyle(3);
-    oneEventCluMap[iCh]->DrawCopy("Colz");//    oneEventCluMap[iCh]->DrawCopy("Colz");
+    oneEventCluMap[iCh]->Draw("Colz");//    oneEventCluMap[iCh]->DrawCopy("Colz");
   }
   oneEventClusterCanvas->SaveAs(Form("One Event Cluster Map_%s_.png", folder));
   oneEventClusterCanvas->Show();
@@ -1212,22 +1212,37 @@ vector<string> dig2Clus(const std::string &fileName, vector<Cluster> &clusters,
         clusterTriggers.emplace_back(trig.getIr(), clStart,
                                      clusters.size() - clStart);
         if(j == numEvent){
-          /*for(auto clu : clusters) {
+          std::array<int, 7> cntC, cntD = {{0}};
+
+          const auto& cluTrig = clusterTriggers[j];
+
+          const auto firstCluster = clStart;
+          const auto lastCluster = clusters.size();
+
+
+          for(int cluEntry = firstCluster; cluEntry < lastCluster; cluEntry++) {
+            auto clu = clusters[cluEntry];
             auto chamber = clu.ch();
-    	    cout << "filling clusters " << chamber << endl;
     	    auto x = clu.x();
     	    auto y = clu.y();
     	    auto charge = clu.q();
-    	    oneEventCluMap[chamber]->Fill(padChX, padChY, charge);
-          }*/
-          oneEventClusters = clusters;
+            oneEventClusters.push_back(clu);
+            cntC[chamber]++;
+          }
+
+          //oneEventClusters = clusters;
           for(const auto& dig : trigDigits){
  	   oneEventDigits.push_back(dig);
-           /*const auto& digId = dig.getPadID();
-    	   cout << "filling digits " << digId << endl;
-    	   Digit::pad2Absolute(digId, &module, &padChX, &padChY);
-    	   oneEventDigMap[module]->Fill(padChX, padChY, dig.getQ());*/
+           int m; int x; int y;
+           const auto& digId = dig.getPadID();
+    	   Digit::pad2Absolute(digId, &m, &x, &y);
+           cntD[m]++;
 	  }
+    	  cout << "oneEventDigits " << oneEventDigits.size() << endl;
+    	  cout << "oneEventClusters " << oneEventClusters.size() << endl;
+
+ 	  cout << "===================" << endl << endl;
+
         }
       } // end if trig.getNumberOfObjects()
       j++;
