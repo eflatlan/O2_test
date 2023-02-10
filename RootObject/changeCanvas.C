@@ -146,11 +146,14 @@ void changeCanvas() {
 
 	auto tCan = std::make_unique<TCanvas>();	
 	auto tPad = static_cast<TPad*>(tCan->cd());
+	gStyle->SetOptStat("");
 	tClone->Draw("Colz");
 	tCan->SaveAs(Form("mod%s",fileName.c_str()));
 	auto a = fileName.substr(fileName.length()-4);
 	tCan->SaveAs(Form("mod%s.png",a.c_str()));
-	
+	auto a2 = fileName.substr(fileName.length()-4, fileName.length());
+	tClone->SaveAs(Form("mod__%s", fileName.c_str()));
+
 	/*
 	auto tObj = fCl->Get("ccdb_object");
 	tObj->Draw("Colz");
